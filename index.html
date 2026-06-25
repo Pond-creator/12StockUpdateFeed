@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stock Update Feed — Folio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">📦</span>
+      <div>
+        <h1>Stock Update Feed</h1>
+        <p id="serverDate">—</p>
+      </div>
+    </div>
+    <button id="refreshBtn" class="refresh" title="โหลดข้อมูลใหม่">↻</button>
+  </header>
+
+  <nav class="tabs" id="tabs">
+    <button class="tab active" data-period="today">วันนี้</button>
+    <button class="tab" data-period="yesterday">เมื่อวาน</button>
+    <button class="tab" data-period="week">สัปดาห์</button>
+    <button class="tab" data-period="month">เดือน</button>
+    <button class="tab" data-period="year">ปี</button>
+    <button class="tab tab-range" data-mode="range">📅 ช่วงวัน</button>
+    <button class="tab tab-stock" data-mode="stock">🔎 เช็คสต็อก</button>
+  </nav>
+
+  <div class="rangebar hidden" id="rangebar">
+    <input type="date" id="fromDate">
+    <span class="rb-sep">ถึง</span>
+    <input type="date" id="toDate">
+    <button id="rangeGo" class="rb-go">ดู</button>
+  </div>
+
+  <div class="filterbar" id="filterbar">
+    <button class="fb active" data-filter="all">ทั้งหมด</button>
+    <button class="fb fb-out" data-filter="out">🔴 จ่าย</button>
+    <button class="fb fb-in" data-filter="in">🟢 รับ</button>
+    <button class="fb fb-b2b" data-filter="b2b">🔵 จอง</button>
+  </div>
+
+  <div class="searchbar">
+    <input type="text" id="search" placeholder="🔍 ค้นหา รหัส / ชื่อสินค้า / หมายเหตุ">
+  </div>
+
+  <main id="feed" class="feed"></main>
+
+  <div id="overlay" class="overlay hidden"><div class="spinner"></div></div>
+  <div id="lightbox" class="lightbox hidden"><img id="lightboxImg" src="" alt=""></div>
+
+  <script src="js/api.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+# GAS source — มี Sheet ID / Drive Folder ID ห้าม push ขึ้น GitHub
+gas/
+*.gs
+
+# ของระบบ
+.DS_Store
+Thumbs.db
+*.log
+node_modules/
+.vscode/
+.idea/
