@@ -51,7 +51,12 @@
 
   <main id="feed" class="feed"></main>
 
-  <div id="overlay" class="overlay hidden"><div class="spinner"></div></div>
+  <div id="overlay" class="overlay hidden">
+    <div class="loadbox">
+      <div class="spinner"></div>
+      <div class="prognum"><span id="progNum">0</span>%</div>
+    </div>
+  </div>
   <div id="lightbox" class="lightbox hidden"><img id="lightboxImg" src="" alt=""></div>
 
   <script src="js/api.js"></script>

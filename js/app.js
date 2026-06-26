@@ -4,20 +4,41 @@ let currentPeriod = 'today';
 let currentData = [];          // feed: [{date,label,cards:[...]}]
 const cache = {};              // period -> data (กันยิงซ้ำตอนสลับแท็บ)
 
-const PAGE = 20;               // feed: แสดงทีละ 20 การ์ด
+const PAGE = 50;               // feed: แสดงทีละ 50 การ์ด
 let flat = [];                 // ลำดับ render feed
 let renderPtr = 0;
 let currentSection = null;
 let feedFilter = 'all';        // 'all' | 'out' | 'in' | 'b2b'
 
 // stock mode
-const STOCK_LIMIT = 30;        // ดึงทีละ 30 จาก server
+const STOCK_LIMIT = 100;       // เช็คสต็อก: ดึงทีละ 100 จาก server
 let stockQuery = '', stockOffset = 0, stockTotal = 0;
 let stockBody = null, stockTimer = null, stockReqId = 0;
 
 const $ = (s) => document.querySelector(s);
 const feedEl = $('#feed');
 const overlay = $('#overlay');
+
+// ====== loading progress (ตัวเลขวิ่ง ให้รู้สึกไม่ค้าง) ======
+let progTimer = null;
+function startProgress() {
+  const el = $('#progNum');
+  let n = 0;
+  if (el) el.textContent = '0';
+  overlay.classList.remove('hidden');
+  clearInterval(progTimer);
+  progTimer = setInterval(() => {
+    const step = n < 60 ? 4 : n < 85 ? 1.5 : 0.4;   // เร็วช่วงแรก ช้าลงใกล้จบ
+    n = Math.min(95, n + step);
+    if (el) el.textContent = Math.floor(n);
+  }, 70);
+}
+function stopProgress() {
+  clearInterval(progTimer);
+  const el = $('#progNum');
+  if (el) el.textContent = '100';
+  overlay.classList.add('hidden');
+}
 
 // ====== init ======
 document.addEventListener('DOMContentLoaded', () => {
@@ -83,7 +104,7 @@ async function load(force = false) {
     render();
     return;
   }
-  overlay.classList.remove('hidden');
+  startProgress();
   try {
     const j = await fetchFeed(currentPeriod, force);
     $('#serverDate').textContent = 'ข้อมูล ณ ' + (j.serverDate || '');
@@ -93,7 +114,7 @@ async function load(force = false) {
   } catch (err) {
     feedEl.innerHTML = '<div class="errbox">โหลดข้อมูลไม่สำเร็จ: ' + esc(err.message) + '</div>';
   } finally {
-    overlay.classList.add('hidden');
+    stopProgress();
   }
 }
 
@@ -148,7 +169,7 @@ function renderNextPage() {
     }
   }
   const remaining = flat.slice(renderPtr).filter(x => x.t === 'card').length;
-  if (remaining > 0) addLoadMore(remaining, renderNextPage);
+  if (remaining > 0) addLoadMore(remaining, renderNextPage, PAGE);
 }
 
 // ====== RANGE MODE (เลือกช่วงวันที่เอง) ======
@@ -174,16 +195,16 @@ async function loadRange() {
   // ช่วงอยู่ในปีนี้ → หั่นจากข้อมูล "ปี" ในเครื่อง (เร็วทันที ไม่ยิง server ซ้ำ)
   if (from >= yearStart) {
     if (!cache['year']) {
-      overlay.classList.remove('hidden');
+      startProgress();
       try {
         const j = await fetchFeed('year');
         cache['year'] = j.data || [];
       } catch (err) {
         feedEl.innerHTML = '<div class="errbox">โหลดข้อมูลไม่สำเร็จ: ' + esc(err.message) + '</div>';
-        overlay.classList.add('hidden');
+        stopProgress();
         return;
       }
-      overlay.classList.add('hidden');
+      stopProgress();
     }
     currentData = cache['year'].filter(d => d.date >= from && d.date <= to);
     $('#serverDate').textContent = 'ช่วง ' + from + ' ถึง ' + to;
@@ -192,7 +213,7 @@ async function loadRange() {
   }
 
   // ช่วงข้ามปีก่อน → ดึงจาก server
-  overlay.classList.remove('hidden');
+  startProgress();
   try {
     const j = await fetchRange(from, to);
     $('#serverDate').textContent = 'ช่วง ' + from + ' ถึง ' + to;
@@ -201,7 +222,7 @@ async function loadRange() {
   } catch (err) {
     feedEl.innerHTML = '<div class="errbox">โหลดข้อมูลไม่สำเร็จ: ' + esc(err.message) + '</div>';
   } finally {
-    overlay.classList.add('hidden');
+    stopProgress();
   }
 }
 
@@ -246,7 +267,7 @@ async function runStock(reset) {
     stockOffset += r.items.length;
     removeLoadMore();
     const remaining = stockTotal - stockOffset;
-    if (remaining > 0) addLoadMore(remaining, () => runStock(false));
+    if (remaining > 0) addLoadMore(remaining, () => runStock(false), STOCK_LIMIT);
   } catch (err) {
     if (myId !== stockReqId) return;
     feedEl.innerHTML = '<div class="errbox">ค้นหาไม่สำเร็จ: ' + esc(err.message) + '</div>';
@@ -254,11 +275,12 @@ async function runStock(reset) {
 }
 
 // ====== load more (ใช้ร่วมทั้ง 2 โหมด) ======
-function addLoadMore(remaining, handler) {
+function addLoadMore(remaining, handler, size) {
+  const step = size || PAGE;
   const btn = document.createElement('button');
   btn.id = 'loadMore';
   btn.className = 'load-more';
-  btn.textContent = `โหลดเพิ่ม ${Math.min(PAGE, remaining)} รายการ (เหลือ ${fmt(remaining)})`;
+  btn.textContent = `โหลดเพิ่ม ${Math.min(step, remaining)} รายการ (เหลือ ${fmt(remaining)})`;
   btn.addEventListener('click', handler);
   feedEl.appendChild(btn);
 }
