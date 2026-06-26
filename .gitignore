@@ -2,6 +2,25 @@
 gas/
 *.gs
 
+# โฟลเดอร์ backup (มีสำเนา gas/ + ไฟล์ข้อมูลจริง)
+12backup/
+*backup*/
+*-backup/
+
+# ไฟล์ข้อมูลจริง — ห้าม push ข้อมูลขึ้น public
+*.xlsx
+*.xls
+*.csv
+
+# secret / credential — กันไว้เผื่ออนาคต
+.env
+.env.*
+*.key
+*.pem
+credentials*.json
+secret*
+*.bak
+
 # ของระบบ
 .DS_Store
 Thumbs.db
