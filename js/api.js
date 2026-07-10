@@ -3,6 +3,10 @@
 // ⚠️ static site เห็น URL นี้ได้ — GAS ตั้ง "อ่านอย่างเดียว ไม่มีข้อมูลลับ"
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbxmcnwYmvoKCP8953grylNZZOg-0tpq8cPSzsX7nP682Fb0qO14KCwxl-JfikdCSgz_/exec';
 
+// URL ของ SnapshotWriter (deploy เป็น Web app: Only myself) — สำหรับปุ่มแมปรูป
+// เฉพาะเจ้าของ (ล็อกอิน Google) กดได้ คนนอกกดจะโดน Google ปฏิเสธ
+const MAP_IMAGES_URL = 'https://script.google.com/macros/s/AKfycbz10elr45QI39-cpOG-C7FSGYNwds1sEEhC-x7z0pxDRZJmRtF4yjLBPqRd-uSSq5c/exec';
+
 async function fetchFeed(period, nocache = false) {
   const url = GAS_URL + '?period=' + encodeURIComponent(period) + (nocache ? '&nocache=1' : '');
   const res = await fetch(url);

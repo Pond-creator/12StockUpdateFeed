@@ -69,6 +69,15 @@ document.addEventListener('DOMContentLoaded', () => {
     feedFilter = fb.dataset.filter;
     render();
   });
+  $('#mapBtn').addEventListener('click', () => {
+    if (typeof MAP_IMAGES_URL === 'undefined' || MAP_IMAGES_URL.includes('PASTE_')) {
+      alert('ยังไม่ได้ตั้งค่า URL ปุ่มแมปรูป (MAP_IMAGES_URL ใน js/api.js)');
+      return;
+    }
+    if (confirm('แมปรูปใหม่จาก Drive?\n(เฉพาะเจ้าของที่ล็อกอิน Google เท่านั้น · ใช้เวลาสักครู่)')) {
+      window.open(MAP_IMAGES_URL + '?action=mapimg', '_blank');
+    }
+  });
   $('#refreshBtn').addEventListener('click', () => {
     if (mode === 'stock') runStock(true);
     else if (mode === 'range') { delete cache['year']; loadRange(); }   // refresh = ดึงปีใหม่
