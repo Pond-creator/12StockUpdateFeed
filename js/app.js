@@ -103,28 +103,96 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ====== FEED MODE ======
+// วัน/เมื่อวาน/สัปดาห์/เดือน → หั่นจากก้อน "35 วันล่าสุด" (โหลดครั้งเดียว) → เร็วทันที
+// ปี → โหลดแยก (ก้อนใหญ่เกินจะรวมกับ 35 วัน)
+let base35 = null;             // ข้อมูล 35 วันล่าสุด (ครอบ วัน/เมื่อวาน/สัปดาห์/เดือน)
+let serverToday = '';          // วันที่ล่าสุดจาก server
+
 async function load(force = false) {
   if (GAS_URL.includes('PASTE_YOUR')) {
     feedEl.innerHTML = '<div class="errbox">ยังไม่ได้ตั้งค่า GAS_URL ใน <b>js/api.js</b></div>';
     return;
   }
-  if (!force && cache[currentPeriod]) {
-    currentData = cache[currentPeriod];
+
+  // แท็บ "ปี" — โหลดแยก
+  if (currentPeriod === 'year') {
+    if (!force && cache['year']) { currentData = cache['year']; render(); return; }
+    startProgress();
+    try {
+      const j = await fetchFeed('year', force);
+      serverToday = j.serverDate || serverToday;
+      cache['year'] = j.data || [];
+      currentData = cache['year'];
+      $('#serverDate').textContent = 'ข้อมูล ณ ' + serverToday;
+      render();
+    } catch (err) {
+      feedEl.innerHTML = '<div class="errbox">โหลดข้อมูลไม่สำเร็จ: ' + esc(err.message) + '</div>';
+    } finally { stopProgress(); }
+    return;
+  }
+
+  // วัน/เมื่อวาน/สัปดาห์/เดือน — ถ้ามี base35 แล้ว หั่นทันที (ไม่ยิง server ซ้ำ)
+  if (base35 && !force) {
+    currentData = sliceForPeriod(currentPeriod, base35);
+    $('#serverDate').textContent = 'ข้อมูล ณ ' + serverToday;
     render();
     return;
   }
+
+  // "วันนี้" (เปิดครั้งแรก) → โชว์เร็วๆ ก่อน แล้วแอบโหลด base35 เบื้องหลัง
+  if (currentPeriod === 'today') {
+    startProgress();
+    try {
+      const j = await fetchFeed('today', force);
+      serverToday = j.serverDate || serverToday;
+      currentData = j.data || [];
+      $('#serverDate').textContent = 'ข้อมูล ณ ' + serverToday;
+      render();
+    } catch (err) {
+      feedEl.innerHTML = '<div class="errbox">โหลดข้อมูลไม่สำเร็จ: ' + esc(err.message) + '</div>';
+    } finally { stopProgress(); }
+    preloadBase35(force).catch(() => {});   // โหลดเบื้องหลัง ไม่บล็อก (พอกดแท็บอื่นจะเร็วทันที)
+    return;
+  }
+
+  // เมื่อวาน/สัปดาห์/เดือน — รอ base35 (ถ้ากำลังโหลดอยู่ก็ใช้ตัวเดียวกัน) แล้วหั่น
   startProgress();
   try {
-    const j = await fetchFeed(currentPeriod, force);
-    $('#serverDate').textContent = 'ข้อมูล ณ ' + (j.serverDate || '');
-    currentData = j.data || [];
-    cache[currentPeriod] = currentData;
+    await preloadBase35(force);
+    currentData = sliceForPeriod(currentPeriod, base35);
+    $('#serverDate').textContent = 'ข้อมูล ณ ' + serverToday;
     render();
   } catch (err) {
     feedEl.innerHTML = '<div class="errbox">โหลดข้อมูลไม่สำเร็จ: ' + esc(err.message) + '</div>';
-  } finally {
-    stopProgress();
-  }
+  } finally { stopProgress(); }
+}
+
+// โหลดก้อน 35 วันล่าสุด (ครั้งเดียว/แชร์ promise เดียวถ้ากำลังโหลดพร้อมกัน)
+let base35Loading = null;
+async function preloadBase35(force) {
+  if (base35 && !force) return base35;
+  if (base35Loading && !force) return base35Loading;   // กำลังโหลดอยู่ → ใช้ promise เดิม
+  base35Loading = (async () => {
+    const t = new Date(), from = new Date(); from.setDate(from.getDate() - 34);
+    const j = await fetchRange(ymd(from), ymd(t));
+    serverToday = j.serverDate || serverToday;
+    base35 = j.data || [];
+    if (force) delete cache['year'];   // refresh = ล้าง cache ปีด้วย
+    return base35;
+  })();
+  try { return await base35Loading; }
+  finally { base35Loading = null; }
+}
+
+// หั่นช่วงวันของแต่ละแท็บจาก base35 (ให้ตรงกับ periodRange_ ฝั่ง GAS)
+function sliceForPeriod(period, days) {
+  const t = ymd(new Date());
+  const shift = (n) => { const x = new Date(); x.setDate(x.getDate() + n); return ymd(x); };
+  let from = t, to = t;                                  // today
+  if (period === 'yesterday') { from = shift(-1); to = shift(-1); }
+  else if (period === 'week') { from = shift(-6); }
+  else if (period === 'month') { const n = new Date(); from = ymd(new Date(n.getFullYear(), n.getMonth(), 1)); }
+  return days.filter(d => d.date >= from && d.date <= to);
 }
 
 function render() {
